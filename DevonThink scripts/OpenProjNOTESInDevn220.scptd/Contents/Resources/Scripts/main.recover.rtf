@@ -1,0 +1,433 @@
+{\rtf1\ansi\ansicpg1252\cocoartf1504\cocoasubrtf830
+{\fonttbl\f0\fnil\fcharset0 Menlo-Regular;}
+{\colortbl;\red255\green255\blue255;\red0\green0\blue0;\red64\green128\blue0;\red108\green5\blue211;
+\red76\green78\blue78;\red0\green22\blue176;\red68\green21\blue176;\red0\green0\blue255;\red255\green0\blue0;
+}
+{\*\expandedcolortbl;;\csgenericrgb\c0\c0\c0;\csgenericrgb\c25000\c50001\c0;\csgenericrgb\c42337\c1841\c82833;
+\csgenericrgb\c29999\c30457\c30457;\csgenericrgb\c0\c8656\c68986;\csgenericrgb\c26552\c8264\c69162;\csgenericrgb\c0\c0\c100000;\csgenericrgb\c100000\c0\c0;
+}
+\deftab480
+\pard\pardeftab480\slleading40\pardirnatural\partightenfactor0
+
+\f0\fs28 \cf2 \ul \ulc2 property\ulnone  \cf3 pblnJustFolder\cf2  : \cf4 false\cf2 \
+\ul property\ulnone  \cf3 pblnUseSyncAsRoot\cf2  : \cf4 false\cf2 \
+\ul property\ulnone  \cf3 pblnPreferFTToOmniOO3\cf2  : \cf4 false\cf2 \
+\
+\cf5 -- Robin Trew\cf2 \
+\
+\cf5 -- ver .204 June 19 2011\cf2 \
+\cf5 -- ver .205  [corrects a bug in which a newly created folder was not immediately displayed]\cf2 \
+\cf5 -- ver .206	[unifies the folder and notes scripts, differing only by value of\cf2 \
+\cf5 --			the property pblnJustFolder at the top of the script]\cf2 \
+\cf5 --	Aug 22 2011\cf2 \
+\cf5 -- Ver .208 Still defaults to the DT Database named in pstrDTDB (below)\cf2 \
+\cf5 --			but can use different DT databases for different OF folders\cf2 \
+\cf5 --			(will use the first existing DT database whose POSIX path is found in the note of an enclosing OmniFocus folder\cf2 \
+\cf5 --			[a script for editing OF folder notes can be found at \cf2 \
+\cf5 --			http://forums.omnigroup.com/showthread.php?t=21942]\cf2 \
+\cf5 -- ver .211 Sep 12 2011\cf2 \
+\cf5 --			Adds option, above - top of script, to make the Sync group the root of all new folders\cf2 \
+\cf5 -- Ver .214 Nov 19 2012 Uses www.FoldingText.com rather than OO3 if pblnPreferFTToOmniOO3=true\cf2 \
+\cf5 -- Ver .216 Now creates .ooutline files.\cf2 \
+\cf5 -- Ver .218 Rich text RTF Link in OF Project Notes\cf2 \
+\
+\cf5 -- Disclaimer\cf2 \
+\cf5 -- This is just a rough draft of something which I have sketched for my own personal use, \cf2 \
+\cf5 -- and which is provided purely as an illustration of possible approaches to coding.\cf2 \
+\cf5 -- You are free to adapt and reuse any part of it, without any warranties, implied\cf2 \
+\cf5 -- or explicit, as to its behaviour or suitability for use\cf2 \
+\
+\cf5 -- IF property pblnJustFolder : **false**  (see top of script)\cf2 \
+\cf5 -- CREATES/OPENS A PROJECT NOTES FILE (STORED IN DEVONthink 2) FOR THE SELECTED OMNIFOCUS PROJECT.\cf2 \
+\cf5 -- 1.	The project notes file is an OmniOutliner 3 document stored in DEVONthink 2 folder\cf2 \
+\cf5 -- 2.	The Devonthink record contains a hyperlink back to the OmniFocus project\cf2 \
+\cf5 -- 2.	The script ensures that a DT hyperlink to the document in DevonThink is placed in the note field of the project\cf2 \
+\cf5 -- 3.	In the absence of a link to existing notes in DevonThink, \cf2 \
+\cf5 --		the script will seek or create the 003 file in a DevonThink folder which matches \cf2 \
+\cf5 --		the folder path of the project in OmniFocus \cf2 \
+\cf5 --		(and add the hyperlinks from project to notes, and from folder and notes to project)\cf2 \
+\
+\cf5 -- OR - IF property pblnJustFolder : **true** (see top of script)\cf2 \
+\cf5 -- JUST CREATES/OPENS A PROJECT MATERIALS FOLDER (IN DEVONthink 2) \cf2 \
+\cf5 -- FOR THE SELECTED OMNIFOCUS PROJECT.\cf2 \
+\cf5 -- 1.	The script ensures that a DT hyperlink to the document in DevonThink is placed in \cf2 \
+\cf5 --		the note field of the project\cf2 \
+\cf5 -- 2.	In the absence of a link to an existing folder in DevonThink, \cf2 \
+\cf5 --		the script will add the hyperlinks from project to folder, and from folder to project)\cf2 \
+\
+\
+\cf5 -- Acknowledgements\cf2 \
+\cf5 -- Inspired by Jim Harrison's excellent scripts, which use the Finder rather than DEVONthink 2\cf2 \
+\cf5 -- http://jhh.med.virginia.edu/main/OmniFocusScripts\cf2 \
+\cf5 -- The icon attached to this file is from the Float collection by Corey Marion\cf2 \
+\cf5 -- http://iconfactory.com/freeware/preview/flot\cf2 \
+\
+\cf5 -- GLOBAL CONSTANTS\cf2 \
+\cf5 -- Initially assumes that project folders will be maintained in \cf2 \
+\cf5 -- a database named [UserName]/Documents/Omnifocus Notes.\cf2 \
+\cf5 -- Edit the name and path below to change the location and/or name \cf2 \
+\cf5 --of the main Projects folder that will contain the individual project folders\cf2 \
+\
+\ul property\ulnone  \cf3 pstrDTDB\cf2  : "OmniFocus Notes" \cf5 -- name of default Devonthink Database\cf2 \
+\ul property\ulnone  \cf3 pstrDTsuffix\cf2  : ".dtBase2"\
+\ul property\ulnone  \cf3 pstrDocsPath\cf2  : (\cf6 path to\cf2  \cf7 documents folder\cf2  \cf6 as\cf2  \cf8 string\cf2 ) \cf5 -- path to ~/Documents\cf2 \
+\ul property\ulnone  \cf3 pstrSync\cf2  : "/Sync"\
+\
+\ul property\ulnone  \cf3 pstrTemplate\cf2  : "Default"\
+\ul property\ulnone  \cf3 pstrOO3Suffix\cf2  : ".ooutline"\
+\ul property\ulnone  \cf3 pstrFTSuffix\cf2  : ".ft"\
+\
+\ul property\ulnone  \cf3 pstrOFPrefix\cf2  : "omnifocus:///task/"\
+\ul property\ulnone  \cf3 pstrXMLPrefix\cf2  : "<value key=\\"link\\">"\
+\ul property\ulnone  \cf3 pstrRunDelim\cf2  : "</lit></run>"\
+\ul property\ulnone  \cf3 pstrDTPrefix\cf2  : "x-devonthink-item://"\
+\cf5 --property pstrDBPath : "~/Library/Caches/com.omnigroup.OmniFocus/OmniFocusDatabase2"\cf2 \
+\cf5 --property pstrDBPath : "~/Library/Containers/com.omnigroup.OmniFocus2.MacAppStore/Data/Library/Caches/com.omnigroup.OmniFocus2.MacAppStore/OmniFocusDatabase2"\cf2 \
+\ul property\ulnone  \cf3 pstrDBPath\cf2  : "$HOME/Library/Containers/com.omnigroup.OmniFocus2/Data/Library/Caches/com.omnigroup.OmniFocus2/OmniFocusDatabase2"\
+\ul property\ulnone  \cf3 pstrFolderLinkTitle\cf2  : "[Devonthink folder for this project]"\
+\ul property\ulnone  \cf3 pstrNoteLinkTitle\cf2  : "[Devonthink notes]"\
+\ul property\ulnone  \cf3 plngURLchars\cf2  : 36\
+\
+\ul on\ulnone  \cf8 \ul \ulc8 run\cf2 \ulnone \
+	\
+	\
+	\cf5 -- IS A PROJECT (OR ONE OF ITS TASKS) SELECTED IN OMNIFOCUS ?\cf2 \
+	\ul set\ulnone  \{\cf3 oProject\cf2 , \cf3 strProjName\cf2 , \cf3 strProjID\cf2 \} \ul to\ulnone  \cf9 GetSeldProject\cf2 ()\
+	\ul if\ulnone  \cf3 oProject\cf2  \ul is\ulnone  \cf8 missing value\cf2  \ul then\ulnone  \ul return\ulnone \
+	\
+	\cf5 -- IS THERE A RELEVANT LINK IN THE NOTE FIELD OF THE PROJECT ?\cf2 \
+	\ul set\ulnone  \{\cf3 strFolderURL\cf2 , \cf3 strNotesURL\cf2 \} \ul to\ulnone  \cf9 DTLinksInNote\cf2 (\cf3 oProject\cf2 )\
+	\
+	\cf5 -- AND IF SO, DOES IT LEAD ANYWHERE ?\cf2 \
+	\ul if\ulnone  \cf3 pblnJustFolder\cf2  \ul then\ulnone \
+		\ul if\ulnone  \cf3 strFolderURL\cf2  \uc0\u8800  "" \ul then\ulnone  \ul if\ulnone  \cf9 FollowDTLink\cf2 (\cf3 strFolderURL\cf2 ) \ul then\ulnone  \ul return\ulnone \
+	\ul else\ulnone \
+		\ul if\ulnone  \cf3 strNotesURL\cf2  \uc0\u8800  "" \ul then\ulnone  \ul if\ulnone  \cf9 FollowDTLink\cf2 (\cf3 strNotesURL\cf2 ) \ul then\ulnone  \ul return\ulnone \
+	\ul end\ulnone  \ul if\ulnone \
+	\
+	\cf5 -- IN THE ABSENCE OF A LIVE DT LINK, CREATE OR FIND A MATCHING FOLDER PATH IN DT\cf2 \
+	\ul tell\ulnone  \cf8 application\cf2  \cf4 id\cf2  "DNtp"\
+		\ul set\ulnone  \cf3 oDTFolder\cf2  \ul to\ulnone  \ul my\ulnone  \cf9 GetParallelFolder\cf2 (\cf3 oProject\cf2 )\
+		\ul set\ulnone  \cf3 group_name\cf2  \ul to\ulnone  \cf4 name\cf2  \ul of\ulnone  \cf3 oDTFolder\cf2 \
+		\ul set\ulnone  \cf3 group_reference_URL\cf2  \ul to\ulnone  \cf4 reference URL\cf2  \ul of\ulnone  \cf3 oDTFolder\cf2 \
+		\ul if\ulnone  \cf3 pblnJustFolder\cf2  \ul then\ulnone \
+			\ul set\ulnone  \cf3 strDTLink\cf2  \ul to\ulnone  \cf4 reference URL\cf2  \ul of\ulnone  \cf3 oDTFolder\cf2 \
+		\ul else\ulnone \
+			\cf5 -- WHICH NOTE APP ARE WE USING - FOLDINGTEXT OR OO3 ?\cf2 \
+			\ul set\ulnone  \cf3 blnFT\cf2  \ul to\ulnone  \cf3 pblnPreferFTToOmniOO3\cf2  \ul and\ulnone  \ul my\ulnone  \cf9 isAppInstalled\cf2 ("com.foldingtext.FoldingText")\
+			\ul if\ulnone  \cf3 blnFT\cf2  \ul then\ulnone \
+				\ul set\ulnone  \cf3 strNoteSuffix\cf2  \ul to\ulnone  \cf3 pstrFTSuffix\cf2 \
+			\ul else\ulnone \
+				\ul set\ulnone  \cf3 strNoteSuffix\cf2  \ul to\ulnone  \cf3 pstrOO3Suffix\cf2 \
+			\ul end\ulnone  \ul if\ulnone \
+			\
+			\cf5 -- CREATE OR FIND A NOTE FILE FOR THIS PROJECT\cf2 \
+			\ul set\ulnone  \cf3 strNoteName\cf2  \ul to\ulnone  "\'95 " & \cf3 strProjName\cf2  & " notes" & \cf3 strNoteSuffix\cf2 \
+			\ul set\ulnone  \cf3 recNotes\cf2  \ul to\ulnone  \ul my\ulnone  \cf9 GetNotes\cf2 (\cf3 oDTFolder\cf2 , \cf3 strNoteName\cf2 , \cf3 strNoteSuffix\cf2 , \cf3 strProjID\cf2 , \cf3 blnFT\cf2 )\
+			\ul set\ulnone  \cf3 strDTLink\cf2  \ul to\ulnone  \cf4 reference URL\cf2  \ul of\ulnone  \cf3 recNotes\cf2 \
+		\ul end\ulnone  \ul if\ulnone \
+		\ul my\ulnone  \cf9 UpdateOFNote\cf2 (\cf3 oProject\cf2 , \cf3 group_name\cf2 , \cf3 group_reference_URL\cf2 , \cf3 strNoteName\cf2 , \cf3 strDTLink\cf2 ) \cf5 -- MODIFICATION\cf2 \
+	\ul end\ulnone  \ul tell\ulnone \
+	\
+	\cf5 -- PLACE AN RTF-FORMATTED DT LINK TO THE NEW OR PRE-EXISTING NOTES  IN THE NOTES FIELD OF THE PROJECT\cf2 \
+	\ul if\ulnone  \cf3 pblnJustFolder\cf2  \ul then\ulnone \
+		\ul set\ulnone  \cf3 strLinkTitle\cf2  \ul to\ulnone  \cf3 pstrFolderLinkTitle\cf2 \
+	\ul else\ulnone \
+		\ul set\ulnone  \cf3 strLinkTitle\cf2  \ul to\ulnone  \cf3 pstrNoteLinkTitle\cf2 \
+	\ul end\ulnone  \ul if\ulnone \
+	\cf5 --my PasteToNote(oProject, strLinkTitle, strDTLink)\cf2 \
+	\
+	\cf5 -- AND FOLLOW THE LINK TO THE FOLDER OR NOTES DOCUMENT IN DT2\cf2 \
+	\cf9 FollowDTLink\cf2 (\cf3 strDTLink\cf2 )\
+	\ul tell\ulnone  \cf8 application\cf2  \cf4 id\cf2  "DNtp" \ul to\ulnone  \cf8 \ul \ulc8 activate\cf2 \ulnone \
+\ul end\ulnone  \cf8 \ul \ulc8 run\cf2 \ulnone \
+\
+\cf5 -- MODIFICATION\cf2 \
+\ul on\ulnone  \cf9 UpdateOFNote\cf2 (\cf3 the_project\cf2 , \cf3 group_name\cf2 , \cf3 group_url\cf2 , \cf3 rec_name\cf2 , \cf3 rec_url\cf2 )\
+	\cf5 -- BUILD NOTE\cf2 \
+	\ul set\ulnone  \cf3 the_note\cf2  \ul to\ulnone  "[DEVONthink group] " & \cf3 group_name\cf2  & "]" & \cf4 linefeed\cf2  & \cf4 linefeed\cf2  & "[OmniOutliner notes] " & \cf3 rec_name\cf2 \
+	\ul tell\ulnone  \cf8 application\cf2  "OmniFocus"\
+		\ul tell\ulnone  \ul front\ulnone  \cf8 document\cf2 \
+			\ul set\ulnone  \cf4 note\cf2  \ul of\ulnone  \cf3 the_project\cf2  \ul to\ulnone  \cf3 the_note\cf2 \
+			\ul tell\ulnone  (\cf4 note\cf2  \ul of\ulnone  \cf3 the_project\cf2 )\
+				\ul set\ulnone  \cf4 value\cf2  \ul of\ulnone  \cf8 attribute\cf2  "link" \ul of\ulnone  \cf8 style\cf2  \ul of\ulnone  \cf8 paragraph\cf2  1 \ul to\ulnone  \cf3 group_url\cf2 \
+				\ul set\ulnone  \cf4 value\cf2  \ul of\ulnone  \cf8 attribute\cf2  "link" \ul of\ulnone  \cf8 style\cf2  \ul of\ulnone  \cf8 paragraph\cf2  3 \ul to\ulnone  \cf3 rec_url\cf2 \
+			\ul end\ulnone  \ul tell\ulnone \
+		\ul end\ulnone  \ul tell\ulnone \
+	\ul end\ulnone  \ul tell\ulnone \
+\ul end\ulnone  \cf9 UpdateOFNote\cf2 \
+\
+\cf5 -- Check whether an app is installed e.g. isAppInstalled("com.foldingtext.FoldingText")\cf2 \
+\cf5 -- for http://www.foldingtext.com\cf2 \
+\ul on\ulnone  \cf9 isAppInstalled\cf2 (\cf3 strBundleCode\cf2 )\
+	\ul try\ulnone \
+		\ul tell\ulnone  \cf8 application\cf2  "Finder"\
+			\cf4 name\cf2  \ul of\ulnone  (\cf8 application file\cf2  \cf4 id\cf2  \cf3 strBundleCode\cf2 ) \uc0\u8800  ""\
+		\ul end\ulnone  \ul tell\ulnone \
+	\ul on\ulnone  \ul error\ulnone \
+		\ul return\ulnone  \cf4 false\cf2 \
+	\ul end\ulnone  \ul try\ulnone \
+\ul end\ulnone  \cf9 isAppInstalled\cf2 \
+\
+\cf5 -- Return the first project selected in the Omnifocus GUI\cf2 \
+\ul on\ulnone  \cf9 GetSeldProject\cf2 ()\
+	\ul tell\ulnone  \cf8 application\cf2  \cf4 id\cf2  "OFOC"\
+		\ul tell\ulnone  \ul front\ulnone  \cf8 document\cf2 \
+			\cf5 -- GET THE FIRST SELECTED PROJECT (CONTENT OR SIDEBAR)\cf2 \
+			\ul if\ulnone  (\cf8 \ul \ulc8 count\cf2 \ulnone  \ul of\ulnone  \cf8 document windows\cf2 ) < 1 \ul then\ulnone  \ul return\ulnone  \{\cf8 missing value\cf2 , "", ""\}\
+			\ul tell\ulnone  \ul front\ulnone  \cf8 document window\cf2 \
+				\ul set\ulnone  \cf3 oProject\cf2  \ul to\ulnone  \cf8 missing value\cf2 \
+				\ul repeat\ulnone  \ul with\ulnone  \cf3 oPanel\cf2  \ul in\ulnone  \{\cf4 content\cf2 , \cf4 sidebar\cf2 \}\
+					\ul set\ulnone  \cf3 lstSelns\cf2  \ul to\ulnone  (\cf4 value\cf2  \ul of\ulnone  \cf8 selected trees\cf2  \ul of\ulnone  \cf3 oPanel\cf2  \ul where\ulnone  (\cf8 class\cf2  \ul of\ulnone  \cf4 value\cf2  = \cf8 task\cf2 ) \ul or\ulnone  (\cf8 class\cf2  \ul of\ulnone  \cf4 value\cf2  = \cf8 project\cf2 ))\
+					\ul if\ulnone  (\cf8 \ul \ulc8 count\cf2 \ulnone  \ul of\ulnone  \cf3 lstSelns\cf2 ) > 0 \ul then\ulnone \
+						\ul set\ulnone  \cf3 oProject\cf2  \ul to\ulnone  \ul first\ulnone  \cf8 item\cf2  \ul of\ulnone  \cf3 lstSelns\cf2 \
+						\ul exit\ulnone  \ul repeat\ulnone \
+					\ul end\ulnone  \ul if\ulnone \
+				\ul end\ulnone  \ul repeat\ulnone \
+				\ul if\ulnone  \cf3 oProject\cf2  \ul is\ulnone  \cf8 missing value\cf2  \ul then\ulnone  \ul return\ulnone  \{\cf8 missing value\cf2 , "", ""\}\
+				\ul if\ulnone  \cf8 class\cf2  \ul of\ulnone  \cf3 oProject\cf2  = \cf8 task\cf2  \ul then\ulnone  \ul set\ulnone  \cf3 oProject\cf2  \ul to\ulnone  \cf4 containing project\cf2  \ul of\ulnone  \cf3 oProject\cf2 \
+				\ul tell\ulnone  \cf3 oProject\cf2  \ul to\ulnone  \ul return\ulnone  \{\ul it\ulnone , \cf4 name\cf2 , \cf4 id\cf2 \}\
+			\ul end\ulnone  \ul tell\ulnone \
+		\ul end\ulnone  \ul tell\ulnone \
+	\ul end\ulnone  \ul tell\ulnone \
+\ul end\ulnone  \cf9 GetSeldProject\cf2 \
+\
+\ul on\ulnone  \cf9 DTLinksInNote\cf2 (\cf3 oProject\cf2 )\
+	\ul tell\ulnone  \cf8 application\cf2  \cf4 id\cf2  "OFOC"\
+		\cf5 -- DOES ITS NOTE CONTAIN A DEVONTHINK URL ?\cf2 \
+		\ul set\ulnone  \cf3 strQuery\cf2  \ul to\ulnone  "select CAST(notexmldata as text) from task where persistentIdentifier = \\"" & (\cf4 id\cf2  \ul of\ulnone  \cf3 oProject\cf2 ) & "\\""\
+		\ul set\ulnone  \cf3 strNoteXML\cf2  \ul to\ulnone  \cf6 do shell script\cf2  "sqlite3 " & \cf3 pstrDBPath\cf2  & \cf4 space\cf2  & \cf4 quoted form\cf2  \ul of\ulnone  \cf3 strQuery\cf2 \
+		\ul set\ulnone  \cf3 strLink\cf2  \ul to\ulnone  \cf3 pstrXMLPrefix\cf2  & \cf3 pstrDTPrefix\cf2 \
+		\ul set\ulnone  \cf3 blnOpened\cf2  \ul to\ulnone  \cf4 false\cf2 \
+		\ul if\ulnone  \cf3 strNoteXML\cf2  \ul contains\ulnone  \cf3 strLink\cf2  \ul then\ulnone \
+			\ul set\ulnone  \{\cf3 strDlm\cf2 , \ul my\ulnone  \cf4 text item delimiters\cf2 \} \ul to\ulnone  \{\ul my\ulnone  \cf4 text item delimiters\cf2 , \cf3 pstrRunDelim\cf2 \}\
+			\ul set\ulnone  \cf3 lstRuns\cf2  \ul to\ulnone  \cf8 text items\cf2  \ul of\ulnone  \cf3 strNoteXML\cf2 \
+			\ul set\ulnone  \ul my\ulnone  \cf4 text item delimiters\cf2  \ul to\ulnone  "<lit>"\
+			\ul set\ulnone  \{\cf3 blnFolder\cf2 , \cf3 blnNote\cf2 \} \ul to\ulnone  \{\cf4 false\cf2 , \cf4 false\cf2 \}\
+			\ul set\ulnone  \{\cf3 strFolderURL\cf2 , \cf3 strNotesURL\cf2 \} \ul to\ulnone  \{"", ""\}\
+			\
+			\ul set\ulnone  \cf3 strStart\cf2  \ul to\ulnone  \cf8 text\cf2  1 \ul thru\ulnone  2 \ul of\ulnone  \cf3 pstrNoteLinkTitle\cf2 \
+			\ul repeat\ulnone  \ul with\ulnone  \cf3 oRun\cf2  \ul in\ulnone  \cf3 lstRuns\cf2 \
+				\ul set\ulnone  \cf3 lstSections\cf2  \ul to\ulnone  \cf8 text items\cf2  \ul of\ulnone  \cf3 oRun\cf2 \
+				\ul if\ulnone  \cf4 length\cf2  \ul of\ulnone  \cf3 lstSections\cf2  > 1 \ul then\ulnone \
+					\ul set\ulnone  \cf3 strLabel\cf2  \ul to\ulnone  \cf8 item\cf2  -1 \ul of\ulnone  \cf3 lstSections\cf2 \
+					\ul set\ulnone  \cf3 strPreamble\cf2  \ul to\ulnone  \cf8 item\cf2  -2 \ul of\ulnone  \cf3 lstSections\cf2 \
+					\
+					\ul if\ulnone  \cf3 strLabel\cf2  \ul begins with\ulnone  \cf3 strStart\cf2  \ul then\ulnone \
+						\ul if\ulnone  \ul not\ulnone  \cf3 blnFolder\cf2  \ul then\ulnone \
+							\ul if\ulnone  \cf3 strLabel\cf2  \ul contains\ulnone  "folder" \ul then\ulnone \
+								\ul set\ulnone  \cf3 strFolderURL\cf2  \ul to\ulnone  \ul my\ulnone  \cf9 ParseLink\cf2 (\cf3 strPreamble\cf2 )\
+								\ul if\ulnone  \cf3 strFolderURL\cf2  \uc0\u8800  "" \ul then\ulnone  \ul set\ulnone  \cf3 blnFolder\cf2  \ul to\ulnone  \cf4 true\cf2 \
+							\ul end\ulnone  \ul if\ulnone \
+						\ul end\ulnone  \ul if\ulnone \
+						\ul if\ulnone  \ul not\ulnone  \cf3 blnNote\cf2  \ul then\ulnone \
+							\ul if\ulnone  \cf3 strLabel\cf2  \ul contains\ulnone  "notes" \ul then\ulnone \
+								\ul set\ulnone  \cf3 strNotesURL\cf2  \ul to\ulnone  \ul my\ulnone  \cf9 ParseLink\cf2 (\cf3 strPreamble\cf2 )\
+								\ul if\ulnone  \cf3 strNotesURL\cf2  \uc0\u8800  "" \ul then\ulnone  \ul set\ulnone  \cf3 blnNotes\cf2  \ul to\ulnone  \cf4 true\cf2 \
+							\ul end\ulnone  \ul if\ulnone \
+						\ul end\ulnone  \ul if\ulnone \
+					\ul end\ulnone  \ul if\ulnone \
+					\ul if\ulnone  \cf3 blnFolder\cf2  \ul and\ulnone  \cf3 blnNote\cf2  \ul then\ulnone  \ul exit\ulnone  \ul repeat\ulnone \
+				\ul end\ulnone  \ul if\ulnone \
+			\ul end\ulnone  \ul repeat\ulnone \
+			\
+			\ul set\ulnone  \ul my\ulnone  \cf4 text item delimiters\cf2  \ul to\ulnone  \cf3 strDlm\cf2 \
+			\ul return\ulnone  \{\cf3 strFolderURL\cf2 , \cf3 strNotesURL\cf2 \}\
+		\ul else\ulnone \
+			\ul if\ulnone  \cf4 note\cf2  \ul of\ulnone  \cf3 oProject\cf2  = "" \ul then\ulnone  \ul set\ulnone  \cf4 note\cf2  \ul of\ulnone  \cf3 oProject\cf2  \ul to\ulnone  \cf4 space\cf2  \cf5 -- (seems to prepare note for easier opening later)\cf2 \
+			\ul return\ulnone  \{"", ""\}\
+		\ul end\ulnone  \ul if\ulnone \
+	\ul end\ulnone  \ul tell\ulnone \
+\ul end\ulnone  \cf9 DTLinksInNote\cf2 \
+\
+\ul on\ulnone  \cf9 ParseLink\cf2 (\cf3 strXML\cf2 )\
+	\ul set\ulnone  \{\cf3 strDlm\cf2 , \ul my\ulnone  \cf4 text item delimiters\cf2 \} \ul to\ulnone  \{\ul my\ulnone  \cf4 text item delimiters\cf2 , \cf3 pstrXMLPrefix\cf2  & \cf3 pstrDTPrefix\cf2 \}\
+	\ul set\ulnone  \cf3 lstParts\cf2  \ul to\ulnone  \cf8 text items\cf2  \ul of\ulnone  \cf3 strXML\cf2 \
+	\ul set\ulnone  \cf3 strURL\cf2  \ul to\ulnone  ""\
+	\ul if\ulnone  \cf4 length\cf2  \ul of\ulnone  \cf3 lstParts\cf2  > 1 \ul then\ulnone \
+		\ul set\ulnone  \ul my\ulnone  \cf4 text item delimiters\cf2  \ul to\ulnone  "</value>"\
+		\ul set\ulnone  \cf3 strURL\cf2  \ul to\ulnone  \ul first\ulnone  \cf8 text item\cf2  \ul of\ulnone  \cf8 item\cf2  2 \ul of\ulnone  \cf3 lstParts\cf2 \
+		\ul if\ulnone  \cf4 length\cf2  \ul of\ulnone  \cf3 strURL\cf2  = \cf3 plngURLchars\cf2  \ul then\ulnone \
+			\ul set\ulnone  \cf3 strURL\cf2  \ul to\ulnone  \cf3 pstrDTPrefix\cf2  & \cf3 strURL\cf2 \
+		\ul else\ulnone \
+			\ul set\ulnone  \cf3 strURL\cf2  \ul to\ulnone  ""\
+		\ul end\ulnone  \ul if\ulnone \
+	\ul end\ulnone  \ul if\ulnone \
+	\ul set\ulnone  \ul my\ulnone  \cf4 text item delimiters\cf2  \ul to\ulnone  \cf3 strDlm\cf2 \
+	\ul return\ulnone  \cf3 strURL\cf2 \
+\ul end\ulnone  \cf9 ParseLink\cf2 \
+\
+\ul on\ulnone  \cf9 FollowDTLink\cf2 (\cf3 strURL\cf2 )\
+	\ul if\ulnone  \cf3 strURL\cf2  \uc0\u8800  "" \ul then\ulnone \
+		\ul set\ulnone  \cf3 blnOpened\cf2  \ul to\ulnone  (\cf6 do shell script\cf2  "open " & \cf4 quoted form\cf2  \ul of\ulnone  \cf3 strURL\cf2 ) = ""\
+		\ul if\ulnone  \cf3 blnOpened\cf2  \ul then\ulnone \
+			\ul tell\ulnone  \cf8 application\cf2  \cf4 id\cf2  "DNtp" \ul to\ulnone  \cf8 \ul \ulc8 activate\cf2 \ulnone \
+			\ul return\ulnone  \cf4 true\cf2 \
+		\ul else\ulnone \
+			\ul return\ulnone  \cf4 false\cf2 \
+		\ul end\ulnone  \ul if\ulnone \
+	\ul else\ulnone \
+		\ul return\ulnone  \cf4 false\cf2 \
+	\ul end\ulnone  \ul if\ulnone \
+\ul end\ulnone  \cf9 FollowDTLink\cf2 \
+\
+\
+\ul on\ulnone  \cf9 GetParallelFolder\cf2 (\cf3 oProject\cf2 )\
+	\ul set\ulnone  \{\cf3 strPath\cf2 , \cf3 strFolderDB\cf2 , \cf3 strProject\cf2 \} \ul to\ulnone  \cf9 GetProjPath\cf2 (\cf3 oProject\cf2 )\
+	\ul tell\ulnone  \cf8 application\cf2  \cf4 id\cf2  "DNtp"\
+		\
+		\cf5 -- CHOOSE THE TARGET DATABASE\cf2 \
+		\cf5 -- EITHER FROM A PATH IN THE ENCLOSING FOLDER, OR FROM THE DEFAULT\cf2 \
+		\ul if\ulnone  \cf3 strFolderDB\cf2  \uc0\u8800  "" \ul then\ulnone \
+			\ul set\ulnone  \cf3 strDb\cf2  \ul to\ulnone  \cf3 strFolderDB\cf2 \
+		\ul else\ulnone \
+			\ul set\ulnone  \cf3 strDb\cf2  \ul to\ulnone  (\cf4 POSIX path\cf2  \ul of\ulnone  \cf3 pstrDocsPath\cf2 ) & \cf3 pstrDTDB\cf2  & \cf3 pstrDTsuffix\cf2 \
+		\ul end\ulnone  \ul if\ulnone \
+		\
+		\ul set\ulnone  \cf3 oDb\cf2  \ul to\ulnone  \cf8 \ul \ulc8 open database\cf2 \ulnone  \cf3 strDb\cf2 \
+		\ul if\ulnone  \cf3 oDb\cf2  \ul is\ulnone  \cf8 missing value\cf2  \ul then\ulnone \
+			\ul set\ulnone  \cf3 oAnswer\cf2  \ul to\ulnone  \cf6 display dialog\cf2  "Create new Devonthink database at \\"" & \cf3 strDb\cf2  & "\\" ?" \cf6 buttons\cf2  \{"Cancel", "OK"\} \cf6 default button\cf2  1\
+			\ul if\ulnone  \ul the\ulnone  \cf7 button returned\cf2  \ul of\ulnone  \cf3 oAnswer\cf2  \ul is\ulnone  "Cancel" \ul then\ulnone  \ul return\ulnone \
+			\ul set\ulnone  \cf3 oDb\cf2  \ul to\ulnone  \cf8 \ul \ulc8 create database\cf2 \ulnone  \cf3 strDb\cf2 \
+		\ul end\ulnone  \ul if\ulnone \
+		\
+		\cf5 -- DEPENDING ON GLOBAL SETTING, OPTIONALLY CREATE NEW FOLDER WITHIN SYNC GROUP\cf2 \
+		\ul if\ulnone  \cf3 pblnUseSyncAsRoot\cf2  \ul then\ulnone \
+			\ul set\ulnone  \cf3 oLocn\cf2  \ul to\ulnone  \cf8 \ul \ulc8 create location\cf2 \ulnone  \cf3 pstrSync\cf2  & \cf3 strPath\cf2  \cf8 \ul \ulc8 in\cf2 \ulnone  \cf3 oDb\cf2 \
+		\ul else\ulnone \
+			\ul set\ulnone  \cf3 oLocn\cf2  \ul to\ulnone  \cf8 \ul \ulc8 create location\cf2 \ulnone  \cf3 strPath\cf2  \cf8 \ul \ulc8 in\cf2 \ulnone  \cf3 oDb\cf2 \
+		\ul end\ulnone  \ul if\ulnone \
+		\ul set\ulnone  \cf4 URL\cf2  \ul of\ulnone  \cf3 oLocn\cf2  \ul to\ulnone  \cf3 pstrOFPrefix\cf2  & (\cf4 id\cf2  \ul of\ulnone  \cf3 oProject\cf2 )\
+		\ul return\ulnone  \cf3 oLocn\cf2 \
+	\ul end\ulnone  \ul tell\ulnone \
+\ul end\ulnone  \cf9 GetParallelFolder\cf2 \
+\
+\ul on\ulnone  \cf9 GetProjPath\cf2 (\cf3 oProject\cf2 )\
+	\ul tell\ulnone  \cf8 application\cf2  \cf4 id\cf2  "OFOC"\
+		\ul set\ulnone  \cf3 strProject\cf2  \ul to\ulnone  \cf4 name\cf2  \ul of\ulnone  \cf3 oProject\cf2 \
+		\ul set\ulnone  \cf3 strPath\cf2  \ul to\ulnone  \cf3 strProject\cf2 \
+		\ul set\ulnone  \cf3 oContainer\cf2  \ul to\ulnone  \cf4 container\cf2  \ul of\ulnone  \cf3 oProject\cf2 \
+		\
+		\ul set\ulnone  \cf3 blnFolderFound\cf2  \ul to\ulnone  \cf4 false\cf2 \
+		\ul set\ulnone  \cf3 strFolderDB\cf2  \ul to\ulnone  ""\
+		\
+		\ul set\ulnone  \cf3 cClass\cf2  \ul to\ulnone  \ul the\ulnone  \cf8 class\cf2  \ul of\ulnone  \cf3 oContainer\cf2 \
+		\ul repeat\ulnone  \ul while\ulnone  \cf3 cClass\cf2  \ul is\ulnone  \ul not\ulnone  \cf8 document\cf2 \
+			\ul if\ulnone  \ul not\ulnone  \cf3 blnFolderFound\cf2  \ul then\ulnone \
+				\ul if\ulnone  \cf3 cClass\cf2  \ul is\ulnone  \cf8 folder\cf2  \ul then\ulnone \
+					\ul set\ulnone  \cf3 strFolderDB\cf2  \ul to\ulnone  \cf4 note\cf2  \ul of\ulnone  \cf3 oContainer\cf2 \
+					\ul if\ulnone  ((\cf3 strFolderDB\cf2  \ul ends with\ulnone  \cf3 pstrDTsuffix\cf2 ) \ul and\ulnone  \ul my\ulnone  \cf9 FileExists\cf2 (\cf3 strFolderDB\cf2 )) \ul then\ulnone  \ul set\ulnone  \cf3 blnFolderFound\cf2  \ul to\ulnone  \cf4 true\cf2 \
+				\ul end\ulnone  \ul if\ulnone \
+			\ul end\ulnone  \ul if\ulnone \
+			\ul set\ulnone  \cf3 strPath\cf2  \ul to\ulnone  \cf4 name\cf2  \ul of\ulnone  \cf3 oContainer\cf2  & "/" & \cf3 strPath\cf2 \
+			\ul set\ulnone  \cf3 oContainer\cf2  \ul to\ulnone  \cf4 container\cf2  \ul of\ulnone  \cf3 oContainer\cf2 \
+			\ul set\ulnone  \cf3 cClass\cf2  \ul to\ulnone  \ul the\ulnone  \cf8 class\cf2  \ul of\ulnone  \cf3 oContainer\cf2 \
+		\ul end\ulnone  \ul repeat\ulnone \
+		\ul return\ulnone  \{"/" & \cf3 strPath\cf2 , \cf3 strFolderDB\cf2 , \cf3 strProject\cf2 \}\
+	\ul end\ulnone  \ul tell\ulnone \
+\ul end\ulnone  \cf9 GetProjPath\cf2 \
+\
+\ul on\ulnone  \cf9 GetNotes\cf2 (\cf3 oDTFolder\cf2 , \cf3 strNoteFile\cf2 , \cf3 strNoteSuffix\cf2 , \cf3 strProjectID\cf2 )\
+	\ul tell\ulnone  \cf8 application\cf2  \cf4 id\cf2  "DNtp"\
+		\ul set\ulnone  \cf3 lstNoteRecs\cf2  \ul to\ulnone  \cf8 children\cf2  \ul of\ulnone  \cf3 oDTFolder\cf2  \ul where\ulnone  \cf4 name\cf2  = \cf3 strNoteFile\cf2 \
+		\ul if\ulnone  \cf4 length\cf2  \ul of\ulnone  \cf3 lstNoteRecs\cf2  > 0 \ul then\ulnone \
+			\ul return\ulnone  \ul first\ulnone  \cf8 item\cf2  \ul of\ulnone  \cf3 lstNoteRecs\cf2 \
+		\ul else\ulnone \
+			\cf5 -- IMPORT A FRESH TEMPLATE FILE FROM THE SAME FOLDER AS THIS SCRIPT\cf2 \
+			\ul set\ulnone  \cf3 strScriptFolder\cf2  \ul to\ulnone  \cf4 POSIX path\cf2  \ul of\ulnone  (\cf6 path to\cf2  \ul me\ulnone )\
+			\cf5 --tell application id "MACS" to set oScriptFolder to container of oThisScript\cf2 \
+			\
+			\ul set\ulnone  \cf3 strTemplate\cf2  \ul to\ulnone  \cf3 strScriptFolder\cf2  & \cf3 pstrTemplate\cf2  & \cf3 strNoteSuffix\cf2 \
+			\ul if\ulnone  \ul my\ulnone  \cf9 BundleExists\cf2 (\cf3 strTemplate\cf2 ) \ul or\ulnone  \ul my\ulnone  \cf9 FileExists\cf2 (\cf3 strTemplate\cf2 ) \ul then\ulnone \
+				\ul set\ulnone  \cf3 oRec\cf2  \ul to\ulnone  \cf8 \ul \ulc8 import\cf2 \ulnone  \cf3 strTemplate\cf2  \cf8 \ul \ulc8 to\cf2 \ulnone  \cf3 oDTFolder\cf2 \
+			\ul else\ulnone \
+				\cf5 -- OR FROM INSIDE THE SCRIPT BUNDLE\cf2 \
+				\ul set\ulnone  \cf3 strTemplate\cf2  \ul to\ulnone  \cf4 POSIX path\cf2  \ul of\ulnone  (\cf6 path to\cf2  \ul me\ulnone ) & \cf3 pstrTemplate\cf2  & \cf3 strNoteSuffix\cf2 \
+				\ul try\ulnone \
+					\ul set\ulnone  \cf3 oRec\cf2  \ul to\ulnone  \cf8 \ul \ulc8 import\cf2 \ulnone  \cf3 strTemplate\cf2  \cf8 \ul \ulc8 to\cf2 \ulnone  \cf3 oDTFolder\cf2 \
+				\ul on\ulnone  \ul error\ulnone \
+					\cf6 display alert\cf2  \cf3 strTemplate\cf2  & " not found in this script bundle"\
+					\ul return\ulnone  \cf8 missing value\cf2 \
+				\ul end\ulnone  \ul try\ulnone \
+			\ul end\ulnone  \ul if\ulnone \
+			\
+			\ul tell\ulnone  \cf3 oRec\cf2 \
+				\ul if\ulnone  \ul it\ulnone  \ul is\ulnone  \cf8 missing value\cf2  \ul then\ulnone  \ul return\ulnone  \ul it\ulnone \
+				\ul set\ulnone  \ul its\ulnone  \cf4 name\cf2  \ul to\ulnone  \cf3 strNoteFile\cf2 \
+				\ul set\ulnone  \ul its\ulnone  \cf4 URL\cf2  \ul to\ulnone  \cf3 pstrOFPrefix\cf2  & \cf3 strProjectID\cf2 \
+			\ul end\ulnone  \ul tell\ulnone \
+			\ul return\ulnone  \cf3 oRec\cf2 \
+		\ul end\ulnone  \ul if\ulnone \
+	\ul end\ulnone  \ul tell\ulnone \
+\ul end\ulnone  \cf9 GetNotes\cf2 \
+\
+\ul on\ulnone  \cf9 FileExists\cf2 (\cf3 strPath\cf2 )\
+	(\cf6 do shell script\cf2  ("test -e " & \cf4 quoted form\cf2  \ul of\ulnone  \cf3 strPath\cf2  & "; echo $?")) = "0"\
+\ul end\ulnone  \cf9 FileExists\cf2 \
+\
+\ul on\ulnone  \cf9 BundleExists\cf2 (\cf3 strPath\cf2 )\
+	(\cf6 do shell script\cf2  ("test -d " & \cf4 quoted form\cf2  \ul of\ulnone  \cf3 strPath\cf2  & "; echo $?")) = "0"\
+\ul end\ulnone  \cf9 BundleExists\cf2 \
+\
+\cf5 (*on PasteToNote(oObj, strLegend, strURL)\
+	set strHTML to quoted form of ("<font face=\\"Helvetica\\"><a href=\\"" & strURL & "\\">" & strLegend & "</a></font><p>")\
+	do shell script "echo " & strHTML & "  | textutil -format html -convert rtf -stdin -stdout | pbcopy -Prefer rtf"\
+	tell application id "OFOC"\
+		tell default document\
+			set lngWins to count of document windows\
+			if lngWins < 1 then make new document window\
+			set visible of front document window to true\
+			set oWin to front document window\
+			set cClass to class of oObj\
+			if not (cClass is in \{task, inbox task, project\}) then return\
+			tell oWin\
+				if \'abclass FCvm\'bb \uc0\u8800  "project" then set \'abclass FCvm\'bb to "project"\
+				if cClass is inbox task then\
+					tell tree 1 of sidebar -- Inbox\
+						if not selected then set selected to true\
+					end tell\
+				else\
+					if (focus as list) \uc0\u8800  \{\} then set focus to \{\}\
+					tell tree 2 of sidebar -- Library\
+						if not selected then set selected to true\
+					end tell\
+				end if\
+			end tell\
+			\
+			set strID to (id of oObj) as string -- haven't quite worked out why re-referencing the object\
+			if cClass = inbox task then\
+				set oObj to inbox task id strID -- seems to be necessary here  (for selection to work)\
+			else if cClass = task then\
+				set oObj to task id strID\
+			else\
+				set oObj to project id strID\
+			end if\
+			tell content of oWin\
+				\'abevent OTREisal\'bb \{oObj\}\
+				set oSeln to first selected tree\
+				set selected of oSeln to false\
+				set selected of oSeln to true\
+				set note expanded of oSeln to false\
+			end tell\
+		end tell\
+		activate\
+	end tell\
+	tell application id "sevs"\
+		keystroke "'" using \{command down\} -- second time if needed\
+		keystroke "v" using \{command down\} -- Paste\
+		-- keystroke "'" using \{command down\} -- second time if needed\
+	end tell\
+	do shell script "sleep 0.2"\
+	tell application id "OFOC"\
+		tell front document\
+			tell content of front document window\
+				set oSeln to (first selected tree)\
+				set selected of oSeln to false\
+				set note expanded of oSeln to false\
+				set selected of oSeln to true\
+			end tell\
+		end tell\
+	end tell\
+end PasteToNote*)\cf2 \
+\
+}
